@@ -55,10 +55,13 @@ namespace GameStatisticsTest
             EndBtn.Enabled = false;
             StartBtn.Enabled = true;
 
-            if (rnd.Next(100) > 50)
+            int nn = rnd.Next(100);
+            if (nn > 66)
                 stats.GameWon(rnd.Next(150));
-            else
+            else if (nn > 33)
                 stats.GameLost(rnd.Next(140));
+            else
+                stats.GameTied();
         }
 
         private void ShowBtn_Click(object sender, EventArgs e)

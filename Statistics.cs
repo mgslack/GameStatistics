@@ -44,7 +44,7 @@ using Microsoft.Win32;
  * 
  * Author:  M. G. Slack
  * Written: 2014-03-14
- * Version: 1.0.1.0
+ * Version: 1.0.2.0
  * 
  * ----------------------------------------------------------------------------
  * 
@@ -52,6 +52,7 @@ using Microsoft.Win32;
  *                       all but GamesStarted statistics. Added a 'GameDone()'
  *                       call to finalize tracking similar to 'GameWon()' or
  *                       'GameLost()'.
+ *          2021-12-01 - Added call for 'tie' game (GameTied()).
  * 
  */
 namespace GameStatistics
@@ -73,6 +74,9 @@ namespace GameStatistics
 
         private int _gamesLost = 0;
         public int GamesLost { get { return _gamesLost; } }
+
+        private int _gamesTied = 0;
+        public int GamesTied { get { return _gamesTied; } }
 
         public int GamesNotFinished {
             get {
@@ -122,6 +126,7 @@ namespace GameStatistics
         const string GAMES_STARTED = "GamesStarted";
         const string GAMES_WON = "GamesWon";
         const string GAMES_LOST = "GamesLost";
+        const string GAMES_TIED = "GamesTied";
         const string HIGH_SCORE = "HighScore";
         const string LEAST_MOVES = "LeastNumberOfWinningMoves";
         const string MOST_MOVES = "MostNumberOfWinningMoves";
@@ -131,12 +136,15 @@ namespace GameStatistics
         const string CUSTOM_X = "CustomXX_";
         #endregion
 
+        #region Private vars
         private string appRegName = "";
         private bool statsReset = false;
         private Dictionary<string, int> customStats = new Dictionary<string, int>();
+        #endregion
 
         // --------------------------------------------------------------------
 
+        #region Constructors
         /*
          * Default constructor, uses a default registry path/key to store
          * statistics under. Probably not useful except for testing.
@@ -156,6 +164,7 @@ namespace GameStatistics
             if (String.IsNullOrEmpty(appRegName)) appRegName = DEF_REG_NAME;
             ReadRegistry();
         }
+        #endregion
 
         // --------------------------------------------------------------------
 
@@ -203,6 +212,7 @@ namespace GameStatistics
                 _gamesStarted = (int) Registry.GetValue(appRegName, GAMES_STARTED, _gamesStarted);
                 _gamesWon = (int) Registry.GetValue(appRegName, GAMES_WON, _gamesWon);
                 _gamesLost = (int) Registry.GetValue(appRegName, GAMES_LOST, _gamesLost);
+                _gamesTied = (int) Registry.GetValue(appRegName, GAMES_TIED, _gamesTied);
                 _highestScore = (int) Registry.GetValue(appRegName, HIGH_SCORE, _highestScore);
                 _leastMoves = (int) Registry.GetValue(appRegName, LEAST_MOVES, _leastMoves);
                 _mostMoves = (int) Registry.GetValue(appRegName, MOST_MOVES, _mostMoves);
@@ -228,6 +238,8 @@ namespace GameStatistics
                 Registry.SetValue(appRegName, GAMES_WON, _gamesWon);
             if (_gamesLost > 0)
                 Registry.SetValue(appRegName, GAMES_LOST, _gamesLost);
+            if (_gamesTied > 0)
+                Registry.SetValue(appRegName, GAMES_TIED, _gamesTied);
             if (_highestScore > 0)
                 Registry.SetValue(appRegName, HIGH_SCORE, _highestScore);
             if (_leastMoves > 0)
@@ -257,6 +269,7 @@ namespace GameStatistics
                             key.DeleteValue(GAMES_STARTED, false);
                             key.DeleteValue(GAMES_WON, false);
                             key.DeleteValue(GAMES_LOST, false);
+                            key.DeleteValue(GAMES_TIED, false);
                             key.DeleteValue(HIGH_SCORE, false);
                             key.DeleteValue(LEAST_MOVES, false);
                             key.DeleteValue(MOST_MOVES, false);
@@ -384,6 +397,21 @@ namespace GameStatistics
             if (!statsReset) { // don't 'track' if reset called after 'start'
                 _gamesLost++;
                 if (curScore > _highestScore) _highestScore = curScore;
+                SaveStatistics();
+            }
+        }
+
+        /*
+         * Method to call when game is a tie.  Ends game statistic gathering
+         * and saves off the statistics.  Does not process tie if the reset
+         * statistics method was called until a 'start' game method is called
+         * again.
+         */
+        public void GameTied()
+        {
+            if (!statsReset)
+            {
+                _gamesTied++;
                 SaveStatistics();
             }
         }
@@ -643,6 +671,8 @@ namespace GameStatistics
                 stats.Append("Games Won....: ").Append(_gamesWon).AppendLine();
             if (_gamesLost > 0)
                 stats.Append("Games Lost...: ").Append(_gamesLost).AppendLine();
+            if (_gamesTied > 0)
+                stats.Append("Games Tied...: ").Append(_gamesTied).AppendLine();
             if (_highestScore > 0)
                 stats.Append("Highest Score Made: ").Append(_highestScore).AppendLine();
             if ((_gamesStarted > 0) || (_gamesWon > 0) || (_gamesLost > 0) || (_highestScore > 0))
