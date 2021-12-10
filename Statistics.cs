@@ -17,7 +17,8 @@ using Microsoft.Win32;
  * - Games Started.
  * - Games Won.
  * - Games Lost.
- * - Games Unfinished - derived value (started - won - lost).
+ * - Games Tied.
+ * - Games Unfinished - derived value (started - won - lost - tied).
  * - Highest Score.
  * - Moves Made in Current Game (not persisted).
  * - Least Number of Moves (winning game only).
@@ -44,7 +45,7 @@ using Microsoft.Win32;
  * 
  * Author:  M. G. Slack
  * Written: 2014-03-14
- * Version: 1.0.2.0
+ * Version: 1.0.3.0
  * 
  * ----------------------------------------------------------------------------
  * 
@@ -53,6 +54,13 @@ using Microsoft.Win32;
  *                       call to finalize tracking similar to 'GameWon()' or
  *                       'GameLost()'.
  *          2021-12-01 - Added call for 'tie' game (GameTied()).
+ *          2021-12-10 - Tweaked unfinished stat to take account of tied games.
+ *                       Also, determined there was a 'bug' in the code to
+ *                       determine least moves, it would zero out the existing
+ *                       least moves value if a game in auto mode didn't save
+ *                       moves made by a user.  Extracted common code from 
+ *                       GameWon and GameDone methods to TrackGameCompTimeAndMoves
+ *                       method to fix least moves made in one place.
  * 
  */
 namespace GameStatistics
@@ -81,7 +89,7 @@ namespace GameStatistics
         public int GamesNotFinished {
             get {
                 if (_gamesStarted > 0)
-                    return _gamesStarted - _gamesWon - _gamesLost;
+                    return _gamesStarted - _gamesWon - _gamesLost - _gamesTied;
                 else return 0;
             }
         }
@@ -329,6 +337,21 @@ namespace GameStatistics
             if (saveStats) SaveStatistics();
             _startTime = DateTime.Now;
         }
+
+        private void TrackGameCompTimeAndMoves(DateTime stamp)
+        {
+            // set quickest win/complete time
+            if (_startTime != DateTime.MinValue)
+            {
+                TimeSpan tmp = stamp.Subtract(_startTime);
+                if ((_quickestWinTime == TimeSpan.MinValue) || (tmp < _quickestWinTime))
+                    _quickestWinTime = tmp;
+            }
+            // set least/most moves made
+            if ((_movesMade > 0) && (_leastMoves == 0 || _movesMade < _leastMoves))
+                _leastMoves = _movesMade;
+            if (_movesMade > _mostMoves) _mostMoves = _movesMade;
+        }
         #endregion
 
         // --------------------------------------------------------------------
@@ -369,17 +392,10 @@ namespace GameStatistics
             // save off before anything else to get a 'better' time-span (if tracking).
             DateTime stamp = DateTime.Now;
             if (!statsReset) { // don't track if reset called after 'start'
-                if (_startTime != DateTime.MinValue) {
-                    TimeSpan tmp = stamp.Subtract(_startTime);
-                    if ((_quickestWinTime == TimeSpan.MinValue) || (tmp < _quickestWinTime))
-                        _quickestWinTime = tmp;
-                }
+                TrackGameCompTimeAndMoves(stamp);
                 _gamesWon++;
                 _dayLastWon = DateTime.Now;
                 if (curScore > _highestScore) _highestScore = curScore;
-                if (((_movesMade > 0) && (_leastMoves == 0)) || (_movesMade < _leastMoves))
-                    _leastMoves = _movesMade;
-                if (_movesMade > _mostMoves) _mostMoves = _movesMade;
                 SaveStatistics();
             }
         }
@@ -436,14 +452,7 @@ namespace GameStatistics
             // save off before anything else to get a 'better' time-span (if tracking).
             DateTime stamp = DateTime.Now;
             if (!statsReset) {
-                if (_startTime != DateTime.MinValue) {
-                    TimeSpan tmp = stamp.Subtract(_startTime);
-                    if ((_quickestWinTime == TimeSpan.MinValue) || (tmp < _quickestWinTime))
-                        _quickestWinTime = tmp;
-                }
-                if (((_movesMade > 0) && (_leastMoves == 0)) || (_movesMade < _leastMoves))
-                    _leastMoves = _movesMade;
-                if (_movesMade > _mostMoves) _mostMoves = _movesMade;
+                TrackGameCompTimeAndMoves(stamp);
                 SaveStatistics();
             }
         }
