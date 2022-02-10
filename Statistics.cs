@@ -45,7 +45,7 @@ using Microsoft.Win32;
  * 
  * Author:  M. G. Slack
  * Written: 2014-03-14
- * Version: 1.0.3.0
+ * Version: 1.0.4.0
  * 
  * ----------------------------------------------------------------------------
  * 
@@ -61,6 +61,7 @@ using Microsoft.Win32;
  *                       moves made by a user.  Extracted common code from 
  *                       GameWon and GameDone methods to TrackGameCompTimeAndMoves
  *                       method to fix least moves made in one place.
+ *          2022-02-10 - Added new method to 'zero' moves mode counter.
  * 
  */
 namespace GameStatistics
@@ -465,6 +466,18 @@ namespace GameStatistics
         public void MoveMade()
         {
             _movesMade++;
+        }
+
+        /*
+         * Method used to zero out moves made.  Should be used if game
+         * has auto-play feature that can be turned on anytime and tracking
+         * moves made, but not when auto-played.  This can be used to
+         * reset the moves made counter so 'least moves' counter is not
+         * messed up.
+         */
+        public void ZeroMovesMade()
+        {
+            _movesMade = 0;
         }
 
         /*
